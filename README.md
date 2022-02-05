@@ -1,2 +1,4 @@
 # arduino-basic-mqtt-client
-A basic MQTT client for Arduino
+A basic but robust MQTT client for Arduino
+
+Tested on Arduino NANO 33 IoT connected to DesignSpark ESDK
