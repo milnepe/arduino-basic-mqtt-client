@@ -2,8 +2,8 @@
   A robust basic Arduino MQTT client that connects
   to DesgnSpark's ESDK
 
-  Version: 1.0
-  Date: 5 February 2022
+  Version: 1.1
+  Date: 1st July 2022
   Author: Peter Milne
 
   Copywrite 2022 Peter Milne
