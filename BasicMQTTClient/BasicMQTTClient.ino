@@ -165,8 +165,8 @@ boolean reconnectMQTT() {
       mqttClient.subscribe(TOPIC);
       Serial.println("MQTT connected");
     }
-    return mqttClient.connected();
   }
+  return mqttClient.connected();
 }
 
 // Update sensor variables each time a message is received
