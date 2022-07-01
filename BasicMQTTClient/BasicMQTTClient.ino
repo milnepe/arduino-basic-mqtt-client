@@ -12,15 +12,16 @@
 
  ****************************************************/
 
+#include <SPI.h>
+#include <WiFiNINA.h>
+#include <utility/wifi_drv.h>
+#include "arduino_secrets.h"
+#include <PubSubClient.h>
+#include "ArduinoJson.h"
+
 // Un-comment for debugging
 // System will not run in DEBUG until serial monitor attaches!
 #define DEBUG
-
-#include <WiFiNINA.h>
-#include "arduino_secrets.h"
-#include <SPI.h>
-#include <PubSubClient.h>
-#include "ArduinoJson.h"
 
 // ESDK host
 // You may need to substiture its IP address on your network
@@ -40,7 +41,8 @@ WiFiClient wifiClient;
 PubSubClient mqttClient(wifiClient);
 
 unsigned long lastReconnectMQTTAttempt = 0;
-bool printFlag = false;
+boolean printFlag = false;
+boolean heartbeat = true;
 
 int co2 = 0;
 double temperature = 0;
@@ -49,6 +51,10 @@ int tvoc = 0;
 int pm = 0;
 
 void setup() {
+  WiFiDrv::pinMode(25, OUTPUT); //define green pin
+  WiFiDrv::pinMode(26, OUTPUT); //define red pin
+  pinMode(6, OUTPUT);
+
   Serial.begin(115200);
 #ifdef DEBUG
   while (!Serial) {
@@ -81,6 +87,8 @@ void loop() {
   }
 
   if (!mqttClient.connected()) {
+    WiFiDrv::analogWrite(25, 0);  // Green off
+    WiFiDrv::analogWrite(26, 255);  // Red on (disconnected)
     // Attempt to reconnect without blocking
     // Stops too many connection attemps which
     // can give you a bad day!
@@ -89,6 +97,8 @@ void loop() {
       lastReconnectMQTTAttempt = now;
       if (reconnectMQTT()) {
         lastReconnectMQTTAttempt = 0;
+        WiFiDrv::analogWrite(25, 255);  // Green on (connected)
+        WiFiDrv::analogWrite(26, 0);  // Red off
       }
     }
   } else {
@@ -103,6 +113,8 @@ void loop() {
 #endif
 
   // Code that must always run
+  digitalWrite(6, (heartbeat = !heartbeat));
+  Serial.println(heartbeat);
   Serial.println("Still running...");
   delay(500);
 }
