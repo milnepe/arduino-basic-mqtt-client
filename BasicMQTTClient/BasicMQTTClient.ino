@@ -21,7 +21,7 @@
 
 // Un-comment for debugging
 // System will not run in DEBUG until serial monitor attaches!
-#define DEBUG
+// #define DEBUG
 
 // ESDK host
 // You may need to substiture its IP address on your network
@@ -178,7 +178,6 @@ boolean reconnectMQTT() {
 
 // Update sensor variables each time a message is received
 void callback(char* topic, byte * payload, unsigned int length) {
-#ifdef DEBUG
   Serial.print("Message arrived [");
   Serial.print(topic);
   Serial.print("] ");
@@ -186,7 +185,6 @@ void callback(char* topic, byte * payload, unsigned int length) {
     Serial.print((char)payload[i]);
   }
   Serial.println();
-#endif
   // ESDK sends a large JSON payload
   // - ensure you have enough memory allocated
   StaticJsonDocument<384> doc;
