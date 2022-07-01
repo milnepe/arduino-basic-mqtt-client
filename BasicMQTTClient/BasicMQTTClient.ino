@@ -32,8 +32,8 @@ int        port     = 1883;
 #define TOPIC "airquality/#"
 
 /////// Enter sensitive data in arduino_secrets.h
-char ssid[] = SECRET_SSID;  // Network SSID
-char pass[] = SECRET_PASS;  // WPA key
+const char ssid[] = SECRET_SSID;  // Network SSID
+const char pass[] = SECRET_PASS;  // WPA key
 
 WiFiClient wifiClient;
 long lastReconnectWIFIAttempt = 0;
@@ -112,7 +112,7 @@ void loop() {
   delay(500);
 }
 
-void reconnectWiFi() {
+int reconnectWiFi() {
   // WL_IDLE_STATUS     = 0
   // WL_NO_SSID_AVAIL   = 1
   // WL_SCAN_COMPLETED  = 2
@@ -121,11 +121,15 @@ void reconnectWiFi() {
   // WL_CONNECTION_LOST = 5
   // WL_DISCONNECTED    = 6
   printWiFiStatus(WiFi.status());
-  // Always force a disconnect for safety
-  WiFi.disconnect();
+  // Always force Wifi drv to disconnect for safety
+  int disconnect_result = WiFi.disconnect();
+  Serial.print("Disconnect state: ");
+  Serial.println(disconnect_result);
+  printWiFiStatus(WiFi.status());
   delay(1000);
   WiFi.begin(ssid, pass);
   printWiFiStatus(WiFi.status());
+  return WiFi.status();
 }
 
 void printWiFiStatus(int state) {
@@ -171,7 +175,7 @@ void callback(char* topic, byte * payload, unsigned int length) {
   Serial.print("Message arrived [");
   Serial.print(topic);
   Serial.print("] ");
-  for (int i = 0; i < length; i++) {
+  for (unsigned int i = 0; i < length; i++) {
     Serial.print((char)payload[i]);
   }
   Serial.println();
