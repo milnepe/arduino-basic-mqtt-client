@@ -36,12 +36,10 @@ const char ssid[] = SECRET_SSID;  // Network SSID
 const char pass[] = SECRET_PASS;  // WPA key
 
 WiFiClient wifiClient;
-long lastReconnectWIFIAttempt = 0;
-PubSubClient mqttClient(wifiClient);
-long lastReconnectMQTTAttempt = 0;
 
-unsigned long delayStart = 0; // time the delay started
-bool delayRunning = false; // true if still waiting for delay to finish
+PubSubClient mqttClient(wifiClient);
+
+unsigned long lastReconnectMQTTAttempt = 0;
 bool printFlag = false;
 
 int co2 = 0;
@@ -70,9 +68,6 @@ void setup() {
   mqttClient.setCallback(callback);
   mqttClient.setBufferSize(384);
 
-  delayStart = millis();
-  delayRunning = true;
-
   Serial.println("Attempting WiFi connection...");
   delay(1000);
 }
@@ -89,7 +84,7 @@ void loop() {
     // Attempt to reconnect without blocking
     // Stops too many connection attemps which
     // can give you a bad day!
-    long now = millis();
+    unsigned long now = millis();
     if (now - lastReconnectMQTTAttempt > 5000) {
       lastReconnectMQTTAttempt = now;
       if (reconnectMQTT()) {
