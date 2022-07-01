@@ -60,6 +60,12 @@ void setup() {
 
   Serial.println("Basic MQTT client");
 
+  // Print firmware version on the module
+  String fv = WiFi.firmwareVersion();
+  String latestFv;
+  Serial.print("Firmware version installed: ");
+  Serial.println(fv);
+
   mqttClient.setServer(broker, port);
   mqttClient.setCallback(callback);
   mqttClient.setBufferSize(384);
