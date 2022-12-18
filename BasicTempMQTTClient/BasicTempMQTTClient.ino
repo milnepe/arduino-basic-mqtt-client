@@ -14,18 +14,20 @@
 
 #include <SPI.h>
 #include <WiFiNINA.h>
-//#include <utility/wifi_drv.h>
 #include "arduino_secrets.h"
 #include <PubSubClient.h>
 // https://pubsubclient.knolleary.net/api
 #include "ArduinoJson.h"
 
-const char* soft_version = "0.1.0";
-int heartbeat_led = 5;
-
 // Un-comment for debugging
 // System will not run in DEBUG until serial monitor attaches!
 #define DEBUG
+
+#define HEARTBEAT_LED 5
+#define RGB_LED_GREEN 25
+#define RGB_LED_RED 26
+
+const char* soft_version = "0.1.0";
 
 // ESDK host
 // You may need to substiture its IP address on your network
@@ -58,9 +60,9 @@ int tvoc = 0;
 int pm = 0;
 
 void setup() {
-  WiFiDrv::pinMode(25, OUTPUT); //define green pin
-  WiFiDrv::pinMode(26, OUTPUT); //define red pin
-  pinMode(heartbeat_led, OUTPUT);
+  WiFiDrv::pinMode(RGB_LED_GREEN, OUTPUT); //define green pin
+  WiFiDrv::pinMode(RGB_LED_RED, OUTPUT); //define red pin
+  pinMode(HEARTBEAT_LED, OUTPUT);
 
   Serial.begin(115200);
 #ifdef DEBUG
@@ -88,6 +90,9 @@ void setup() {
   mqttClient.setCallback(callback);
   mqttClient.setBufferSize(384);
 
+  WiFiDrv::analogWrite(RGB_LED_GREEN, 0);  // Green off
+  WiFiDrv::analogWrite(RGB_LED_RED, 255);  // Red on (disconnected)
+
   Serial.println("Attempting WiFi connection...");
   delay(1000);
 }
@@ -101,8 +106,6 @@ void loop() {
   }
 
   if (!mqttClient.connected()) {
-    WiFiDrv::analogWrite(25, 0);  // Green off
-    WiFiDrv::analogWrite(26, 255);  // Red on (disconnected)
     // Attempt to reconnect without blocking
     // Stops too many connection attemps which
     // can give you a bad day!
@@ -111,7 +114,7 @@ void loop() {
       lastReconnectMQTTAttempt = now;
       if (reconnectMQTT()) {
         lastReconnectMQTTAttempt = 0;
-        WiFiDrv::analogWrite(25, 255);  // Green on (connected)
+        WiFiDrv::analogWrite(RGB_LED_GREEN, 255);  // Green on (connected)
         WiFiDrv::analogWrite(26, 0);  // Red off
       }
     }
@@ -127,7 +130,7 @@ void loop() {
 #endif
 
   // Code that must always run
-  digitalWrite(heartbeat_led, (heartbeat = !heartbeat));
+  digitalWrite(HEARTBEAT_LED, (heartbeat = !heartbeat));
   Serial.println(heartbeat);
   Serial.println("Still running...");
   delay(500);
