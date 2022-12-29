@@ -2,6 +2,9 @@
   A basic Arduino MQTT client with temperature
   sensors
 
+  Test with client
+  mosquitto_sub -h airquality -t '/beer/test' -F '%x : %l'
+
   Version: 0.1.0
   Date: 18 December 2022
   Author: Peter Milne
@@ -15,8 +18,7 @@
 #include <SPI.h>
 #include <WiFiNINA.h>
 #include "arduino_secrets.h"
-#include <PubSubClient.h>
-// https://pubsubclient.knolleary.net/api
+#include <PubSubClient.h>  // https://pubsubclient.knolleary.net/api
 #include "ArduinoJson.h"
 
 // Un-comment for debugging
@@ -33,10 +35,10 @@ const char* soft_version = "0.1.0";
 // You may need to substiture its IP address on your network
 //const char broker[] = "192.168.0.75";
 const char broker[] = "airquality";
-int        port     = 1883;
+int port = 1883;
 
 // ESDK topic root
-#define TOPIC "airquality/#"
+#define TOPIC "/beer/test"
 
 /////// Enter sensitive data in arduino_secrets.h
 const char ssid[] = SECRET_SSID;  // Network SSID
@@ -53,21 +55,23 @@ unsigned long lastReconnectMQTTAttempt = 0;
 boolean printFlag = false;
 boolean heartbeat = true;
 
-int co2 = 0;
-double temperature = 0;
-double humidity = 0;
-int tvoc = 0;
-int pm = 0;
+int reading = 0;
+byte buffer[2] = { 0 };
+// int co2 = 0;
+// double temperature = 0;
+// double humidity = 0;
+// int tvoc = 0;
+// int pm = 0;
 
 void setup() {
-  WiFiDrv::pinMode(RGB_LED_GREEN, OUTPUT); //define green pin
-  WiFiDrv::pinMode(RGB_LED_RED, OUTPUT); //define red pin
+  WiFiDrv::pinMode(RGB_LED_GREEN, OUTPUT);  //define green pin
+  WiFiDrv::pinMode(RGB_LED_RED, OUTPUT);    //define red pin
   pinMode(HEARTBEAT_LED, OUTPUT);
 
   Serial.begin(115200);
 #ifdef DEBUG
   while (!Serial) {
-    ; // wait for serial port to connect
+    ;  // wait for serial port to connect
   }
 #endif
 
@@ -87,7 +91,7 @@ void setup() {
   Serial.println(fv);
 
   mqttClient.setServer(broker, port);
-  mqttClient.setCallback(callback);
+  // mqttClient.setCallback(callback);
   mqttClient.setBufferSize(384);
 
   WiFiDrv::analogWrite(RGB_LED_GREEN, 0);  // Green off
@@ -115,25 +119,26 @@ void loop() {
       if (reconnectMQTT()) {
         lastReconnectMQTTAttempt = 0;
         WiFiDrv::analogWrite(RGB_LED_GREEN, 255);  // Green on (connected)
-        WiFiDrv::analogWrite(26, 0);  // Red off
+        WiFiDrv::analogWrite(26, 0);               // Red off
       }
     }
   } else {
     mqttClient.loop();
   }
+  reading++;
+  buffer[0] = highByte(reading);
+  buffer[1] = lowByte(reading);
+  mqttClient.publish(TOPIC, buffer, 2);
 
 #ifdef DEBUG
-  if (printFlag) {
-    printSensorReadings();
-    printFlag = false;
-  }
+  printSensorReadings();
 #endif
 
   // Code that must always run
   digitalWrite(HEARTBEAT_LED, (heartbeat = !heartbeat));
   Serial.println(heartbeat);
   Serial.println("Still running...");
-  delay(500);
+  delay(1000);
 }
 
 int reconnectWiFi() {
@@ -185,7 +190,7 @@ boolean reconnectMQTT() {
   if (WiFi.status() == WL_CONNECTED) {
     Serial.print("Attempting connection to the MQTT server: ");
     Serial.println(broker);
-    if (mqttClient.connect(macstr)) { // use wifi mac addr
+    if (mqttClient.connect(macstr)) {  // use wifi mac addr
       mqttClient.subscribe(TOPIC);
       Serial.println("MQTT connected");
     }
@@ -194,36 +199,43 @@ boolean reconnectMQTT() {
 }
 
 // Update sensor variables each time a message is received
-void callback(char* topic, byte * payload, unsigned int length) {
-  Serial.print("Message arrived [");
-  Serial.print(topic);
-  Serial.print("] ");
-  for (unsigned int i = 0; i < length; i++) {
-    Serial.print((char)payload[i]);
-  }
-  Serial.println();
-  // ESDK sends a large JSON payload
-  // - ensure you have enough memory allocated
-  StaticJsonDocument<384> doc;
-  deserializeJson(doc, payload, length);
-  co2 = doc["co2"]["co2"];
-  temperature = doc["thv"]["temperature"];
-  humidity = doc["thv"]["humidity"];
-  tvoc = doc["thv"]["vocIndex"];
-  pm = doc["pm"]["pm2.5"];
+// void callback(char* topic, byte * payload, unsigned int length) {
+//   Serial.print("Message arrived [");
+//   Serial.print(topic);
+//   Serial.print("] ");
+//   for (unsigned int i = 0; i < length; i++) {
+//     Serial.print((char)payload[i]);
+//   }
+//   Serial.println();
+//   // ESDK sends a large JSON payload
+//   // - ensure you have enough memory allocated
+//   StaticJsonDocument<384> doc;
+//   deserializeJson(doc, payload, length);
+//   co2 = doc["co2"]["co2"];
+//   temperature = doc["thv"]["temperature"];
+//   humidity = doc["thv"]["humidity"];
+//   tvoc = doc["thv"]["vocIndex"];
+//   pm = doc["pm"]["pm2.5"];
 
-  printFlag = true;
-}
+//   printFlag = true;
+// }
 
 void printSensorReadings() {
-  Serial.print("CO2: ");
-  Serial.println(co2);
-  Serial.print("Temperature: ");
-  Serial.println(temperature);
-  Serial.print("Humidity: ");
-  Serial.println(humidity);
-  Serial.print("TVOC: ");
-  Serial.println(tvoc);
-  Serial.print("PM2.5: ");
-  Serial.println(pm);
+  Serial.print("Reading: ");
+  Serial.print(reading);
+  Serial.print("high byte: ");
+  Serial.print(buffer[0], HEX);
+  Serial.print("low byte: ");
+  Serial.print(buffer[1], HEX);
+  Serial.println();
+  // Serial.print("CO2: ");
+  // Serial.println(co2);
+  // Serial.print("Temperature: ");
+  // Serial.println(temperature);
+  // Serial.print("Humidity: ");
+  // Serial.println(humidity);
+  // Serial.print("TVOC: ");
+  // Serial.println(tvoc);
+  // Serial.print("PM2.5: ");
+  // Serial.println(pm);
 }
