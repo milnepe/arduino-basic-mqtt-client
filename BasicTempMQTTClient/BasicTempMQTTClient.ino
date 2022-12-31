@@ -55,13 +55,8 @@ unsigned long lastReconnectMQTTAttempt = 0;
 boolean printFlag = false;
 boolean heartbeat = true;
 
-int reading = 0;
-byte buffer[2] = { 0 };
-// int co2 = 0;
-// double temperature = 0;
-// double humidity = 0;
-// int tvoc = 0;
-// int pm = 0;
+int32_t raw_reading = -30;  // Raw readings
+byte buffer[4] = { 0 };     // Readings converted to bytes
 
 void setup() {
   WiFiDrv::pinMode(RGB_LED_GREEN, OUTPUT);  //define green pin
@@ -125,10 +120,9 @@ void loop() {
   } else {
     mqttClient.loop();
   }
-  reading++;
-  buffer[0] = highByte(reading);
-  buffer[1] = lowByte(reading);
-  mqttClient.publish(TOPIC, buffer, 2);
+  raw_reading++;  // mock
+  convert_reading_to_bytes(raw_reading);
+  mqttClient.publish(TOPIC, buffer, 4);  // Send a reading as 2 bytes
 
 #ifdef DEBUG
   printSensorReadings();
@@ -139,6 +133,14 @@ void loop() {
   Serial.println(heartbeat);
   Serial.println("Still running...");
   delay(1000);
+}  // end loop
+
+// Convert a raw reading and hold it in buffer as high and low bytes
+void convert_reading_to_bytes(int32_t reading) {
+  buffer[0] = (reading >> 24) & 0xFF;
+  buffer[1] = (reading >> 16) & 0xFF;
+  buffer[2] = (reading >> 8) & 0xFF;
+  buffer[3] = reading & 0xFF;
 }
 
 int reconnectWiFi() {
@@ -222,20 +224,16 @@ boolean reconnectMQTT() {
 
 void printSensorReadings() {
   Serial.print("Reading: ");
-  Serial.print(reading);
-  Serial.print("high byte: ");
+  Serial.print(raw_reading);
+  Serial.print(" ");
   Serial.print(buffer[0], HEX);
-  Serial.print("low byte: ");
+  Serial.print(" ");
   Serial.print(buffer[1], HEX);
-  Serial.println();
-  // Serial.print("CO2: ");
-  // Serial.println(co2);
-  // Serial.print("Temperature: ");
-  // Serial.println(temperature);
-  // Serial.print("Humidity: ");
-  // Serial.println(humidity);
-  // Serial.print("TVOC: ");
-  // Serial.println(tvoc);
-  // Serial.print("PM2.5: ");
-  // Serial.println(pm);
+  Serial.print(" ");
+  Serial.print(buffer[2], HEX);
+  Serial.print(" ");
+  Serial.print(buffer[3], HEX);
+  Serial.print(" check: ");
+  int32_t read_back = ((buffer[0] << 24) + (buffer[1] << 16) + (buffer[2] << 8) + buffer[3]);
+  Serial.println(read_back);
 }
